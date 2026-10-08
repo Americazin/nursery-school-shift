@@ -1,0 +1,957 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="シフト表">
+<meta name="theme-color" content="#2f7d6d">
+<title>保育園シフト表</title>
+<style>
+:root{
+  --main:#2f7d6d; --main-l:#e4f2ee; --bg:#f6f7f8; --card:#fff; --line:#dfe3e6;
+  --text:#22292f; --sub:#6b7680; --sat:#2563eb; --sat-bg:#eef4ff; --off:#9aa3ab; --warn:#fde68a;
+  --std:#dbeafe; --chg:#fde68a; --req:#f59e0b;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;font-size:15px}
+button{font:inherit;color:inherit;border:none;background:none;cursor:pointer}
+input,select{font-size:16px;font-family:inherit}
+header{position:sticky;top:0;z-index:30;background:var(--main);color:#fff;padding:calc(env(safe-area-inset-top) + 8px) 12px 8px}
+.hrow{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.facility{font-size:12px;opacity:.85}
+.yearnav{display:flex;align-items:center;gap:2px}
+.yearnav h1{font-size:19px;margin:0;min-width:118px;text-align:center;line-height:1.1}
+.yearnav h1 small{display:block;font-size:11px;font-weight:400;opacity:.85}
+.yearnav button{color:#fff;font-size:22px;width:40px;height:40px;border-radius:8px}
+.yearnav button:disabled{opacity:.3}
+.yearnav button:active{background:rgba(255,255,255,.2)}
+.hbtn{color:#fff;font-size:12px;border:1px solid rgba(255,255,255,.6);border-radius:14px;padding:4px 10px}
+main{padding-bottom:calc(70px + env(safe-area-inset-bottom))}
+.view{display:none}.view.active{display:block}
+
+.bar{display:flex;gap:6px;overflow-x:auto;padding:8px 10px 0;scrollbar-width:none}
+.bar::-webkit-scrollbar{display:none}
+.chip{flex:none;border:1.5px solid var(--line);background:#fff;border-radius:18px;padding:6px 11px;font-size:13px;white-space:nowrap}
+.chip.on{border-color:var(--main);background:var(--main);color:#fff}
+.chip.req{border-color:var(--req);color:#b45309}.chip.req.on{background:var(--req);color:#fff}
+.chip.sm{padding:4px 10px;font-size:12px}
+.seg{display:inline-flex;border:1.5px solid var(--main);border-radius:18px;overflow:hidden;flex:none}
+.seg button{padding:5px 12px;font-size:13px;color:var(--main)}
+.seg button.on{background:var(--main);color:#fff}
+.hint{font-size:12px;color:var(--sub);padding:6px 12px 0}
+
+/* table */
+.tablewrap{overflow:auto;-webkit-overflow-scrolling:touch;max-height:calc(100vh - 260px);max-height:calc(100dvh - 260px);margin:8px 0;background:#fff;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+table.grid{border-collapse:separate;border-spacing:0;font-size:12px}
+.grid th,.grid td{border-right:1px solid var(--line);border-bottom:1px solid var(--line);text-align:center;padding:0;background:#fff}
+.grid thead th{position:sticky;top:0;z-index:3;font-weight:600;line-height:1.15}
+.grid thead tr.mrow th{height:24px;background:#f2f5f4;color:var(--main);text-align:left;padding-left:6px;font-size:12px}
+.grid thead tr.drow th{top:24px;height:36px;min-width:44px}
+.grid thead th small{display:block;font-weight:400;font-size:10px}
+.grid .name{position:sticky;left:0;z-index:2;min-width:92px;max-width:92px;text-align:left;padding:4px 6px;background:#fff;box-shadow:1px 0 0 var(--line)}
+.grid thead .name{z-index:5;background:#fff!important}
+.grid .name b{display:block;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.grid .name span{display:block;font-size:10px;color:var(--main);overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.grid td.c{height:44px;min-width:44px;position:relative}
+.grid td.c .in{position:absolute;inset:2px;border-radius:5px;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.1;font-size:11.5px}
+.grid td.c .in .t2{font-size:10.5px;opacity:.8}
+.grid td.c .in.std{background:var(--std)}
+.grid td.c .in.chg{background:var(--chg)}
+.grid td.c .in.auto{box-shadow:inset 0 0 0 1.5px var(--main)}
+.grid td.c .in.off{color:#fff;background:var(--off);font-size:11px}
+.grid td.c .in.off.paid{background:#8b5cf6}
+.grid td.c .in.off.req{background:var(--req)}
+.grid .sat{background:var(--sat-bg)!important;color:var(--sat)}
+.grid .ms{border-left:2px solid #9fb8b1}
+.grid td.c.today,.grid th.today{box-shadow:inset 0 0 0 2px var(--main)}
+.grid .tot{min-width:56px;font-size:11px;line-height:1.35;background:#fafbfb!important;position:sticky;right:0;z-index:2;box-shadow:-1px 0 0 var(--line)}
+.grid thead .tot{z-index:5}
+.grid tfoot td{position:sticky;bottom:0;z-index:2;background:#f2f5f4;font-weight:600;height:30px}
+.grid tfoot td.name{z-index:4;font-size:11px;color:var(--sub);background:#f2f5f4}
+.grid tfoot td.short{background:var(--warn)!important;color:#7c2d12}
+.empty{padding:40px 20px;text-align:center;color:var(--sub);line-height:1.8}
+
+.actions{display:flex;flex-wrap:wrap;gap:8px;padding:6px 10px}
+.btn{border-radius:10px;padding:10px 14px;background:#fff;border:1px solid var(--line);font-size:14px}
+.btn.pri{background:var(--main);color:#fff;border-color:var(--main)}
+.btn.danger{color:#b91c1c;border-color:#f3c2c2}
+.btn:active{opacity:.7}
+
+.sec{padding:12px}
+.sec h2{font-size:15px;margin:8px 2px 8px;color:var(--sub);font-weight:600}
+.card{background:var(--card);border-radius:12px;border:1px solid var(--line);overflow:hidden;margin-bottom:14px}
+.row{display:flex;align-items:center;gap:10px;padding:11px 12px;border-bottom:1px solid var(--line)}
+.row:last-child{border-bottom:none}
+.row .grow{flex:1;min-width:0}
+.row .ttl{font-weight:600}
+.row .meta{font-size:12px;color:var(--sub);margin-top:2px}
+.badge{font-size:11px;border-radius:10px;padding:2px 8px;background:var(--main-l);color:var(--main);white-space:nowrap}
+.badge.gray{background:#eceff1;color:#6b7680}
+.mini{width:34px;height:34px;border-radius:8px;border:1px solid var(--line);background:#fff;font-size:14px;flex:none}
+.mini:disabled{opacity:.3}
+.toggle{display:flex;align-items:center;gap:8px;font-size:14px;padding:4px 2px 10px}
+.num{width:70px;padding:8px;border:1px solid var(--line);border-radius:8px;text-align:center}
+.tin{padding:8px;border:1px solid var(--line);border-radius:8px;background:#fff;min-width:0}
+.note{font-size:12px;color:var(--sub);line-height:1.7;padding:0 4px}
+
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:40;display:flex;background:#fff;border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+.tabbar button{flex:1;padding:8px 0 6px;font-size:11px;color:var(--sub);display:flex;flex-direction:column;align-items:center;gap:2px}
+.tabbar button svg{width:24px;height:24px}
+.tabbar button.on{color:var(--main)}
+
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:50;display:none}
+.overlay.show{display:block}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:51;background:#fff;border-radius:16px 16px 0 0;
+  padding:14px 14px calc(14px + env(safe-area-inset-bottom));max-height:88vh;overflow:auto;transform:translateY(105%);transition:transform .22s ease}
+.sheet.show{transform:none}
+.sheet h3{margin:0 0 2px;font-size:17px}
+.sheet .sub{color:var(--sub);font-size:13px;margin-bottom:12px}
+.sheet label.lb{display:block;font-size:12px;color:var(--sub);margin:12px 0 4px}
+.sheet input[type=text],.sheet input[type=date],.sheet input[type=time],.sheet input[type=number],.sheet select{
+  width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;background:#fff;-webkit-appearance:none;appearance:none;min-height:44px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 0.8fr;gap:8px}
+.cap{font-size:11px;color:var(--sub)}
+.offs{display:flex;flex-wrap:wrap;gap:8px}
+.sheet .foot{display:flex;gap:8px;margin-top:16px}
+.sheet .foot .btn{flex:1}
+.navday{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.navday button{font-size:13px;color:var(--main);padding:6px 4px}
+.navday button:disabled{opacity:.3}
+.bigwork{width:100%;padding:14px;border-radius:12px;background:var(--std);border:1.5px solid #93c5fd;font-size:16px;font-weight:600}
+.checks{display:flex;flex-wrap:wrap;gap:8px}
+.checks label{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:18px;padding:6px 10px;font-size:13px}
+.checks input{width:18px;height:18px;margin:0}
+.stat{display:flex;justify-content:space-between;padding:8px 2px;border-bottom:1px solid var(--line);font-size:14px}
+.stat:last-child{border-bottom:none}
+.alert{background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;border-radius:10px;padding:10px;font-size:13px;margin:10px 0;line-height:1.6}
+.toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom));transform:translateX(-50%);background:rgba(34,41,47,.92);color:#fff;
+  padding:9px 16px;border-radius:20px;font-size:13px;z-index:60;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.show{opacity:1}
+
+#printArea{display:none}
+@media print{
+  @page{size:A4 landscape;margin:8mm}
+  body{background:#fff}
+  header,main,.tabbar,.toast,.overlay,.sheet{display:none!important}
+  #printArea{display:block}
+  .pmonth{page-break-after:always;break-after:page}
+  .pmonth:last-child{page-break-after:auto;break-after:auto}
+  .ptitle{display:flex;justify-content:space-between;font-size:14px;font-weight:700;margin:0 0 4px}
+  table.pt{width:100%;border-collapse:collapse;table-layout:fixed;font-size:8.5px}
+  .pt th,.pt td{border:1px solid #999;text-align:center;padding:1px 0;height:22px;overflow:hidden}
+  .pt .pn{width:24mm;text-align:left;padding-left:3px}
+  .pt .pn small{color:#2f7d6d}
+  .pt .ptot{width:13mm}
+  .pt .sat{background:#eef4ff;color:#2563eb}
+  .pt .off{background:#d1d5db}
+  .pt .req{background:#fcd34d}
+  .pt .chg{background:#fef3c7}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hrow">
+    <div>
+      <div class="facility" id="facilityLabel"></div>
+      <div class="yearnav">
+        <button id="prevY" aria-label="前の年度">‹</button>
+        <h1 id="yearLabel"></h1>
+        <button id="nextY" aria-label="次の年度">›</button>
+      </div>
+    </div>
+    <button class="hbtn" id="thisY">今日</button>
+  </div>
+</header>
+
+<main>
+  <section class="view active" id="view-shift">
+    <div class="bar">
+      <div class="seg" id="modeSeg"><button data-mode="all">全日</button><button data-mode="sat">土曜のみ</button></div>
+      <span id="monthChips" style="display:contents"></span>
+    </div>
+    <div class="bar" id="brushbar"></div>
+    <div class="hint" id="hint"></div>
+    <div class="tablewrap" id="tablewrap"></div>
+    <div class="actions">
+      <button class="btn pri" id="autoSat">土曜を自動割り振り</button>
+      <button class="btn" id="bulkBtn">一括入力</button>
+      <button class="btn" id="clearAuto">自動分をクリア</button>
+    </div>
+    <div class="actions">
+      <button class="btn" id="printBtn">印刷・PDF</button>
+      <button class="btn" id="csvBtn">CSV出力</button>
+    </div>
+  </section>
+
+  <section class="view" id="view-staff">
+    <div class="sec">
+      <div class="actions" style="padding:0 0 10px"><button class="btn pri" id="addStaff">＋ 職員を追加</button></div>
+      <label class="toggle"><input type="checkbox" id="showRetired"> 退職者も表示する</label>
+      <div class="card" id="staffList"></div>
+      <p class="note">・並び順はシフト表の表示順になります（↑↓で変更）。<br>・退職した職員は「退職（シフト表に表示しない）」にチェックしてください。入力済みのシフトは残ります。削除するとその職員のシフトもすべて消えます。</p>
+    </div>
+  </section>
+
+  <section class="view" id="view-settings">
+    <div class="sec">
+      <h2>園の情報</h2>
+      <div class="card">
+        <div class="row"><div class="grow"><div class="meta">園名（印刷時のタイトル）</div>
+          <input type="text" id="facilityInput" style="width:100%;border:none;padding:6px 0;font-size:16px"></div></div>
+      </div>
+
+      <h2>標準の勤務時間</h2>
+      <div class="card">
+        <div class="row" style="flex-wrap:wrap">
+          <div style="flex:1;min-width:90px"><div class="cap">開始</div><input type="time" id="stdS" class="tin" step="300" style="width:100%"></div>
+          <div style="flex:1;min-width:90px"><div class="cap">終了</div><input type="time" id="stdE" class="tin" step="300" style="width:100%"></div>
+          <div style="width:80px"><div class="cap">休憩(分)</div><input type="number" id="stdB" class="tin" min="0" step="5" inputmode="numeric" style="width:100%"></div>
+        </div>
+      </div>
+      <p class="note" style="margin:-6px 0 14px">「出勤」で入れるときの時間です。日ごとの時間変更は、シフト表のマスをタップして行えます（標準と違う時間は黄色で表示）。</p>
+
+      <h2>土曜の自動割り振り</h2>
+      <div class="card">
+        <div class="row"><div class="grow"><div class="ttl">1日の最低出勤人数</div><div class="meta">下回る日を黄色で表示（0で無効）</div></div>
+          <input type="number" id="minInput" class="num" min="0" inputmode="numeric"></div>
+      </div>
+      <p class="note" style="margin:-6px 0 14px">土曜は必ず2名で割り振ります。優先順位は ①年度（4月〜3月）の土曜出勤回数を全員そろえる ②2週続けての土曜出勤を避ける ③6連勤（月〜土）を避ける の順です。希望休・休みの日には入れません。職員ごとの「月○回まで」「2週連続なし」は、職員の編集画面で設定できます（この条件は必ず守ります）。</p>
+
+      <h2>休園日</h2>
+      <div class="card">
+        <div class="row"><div class="grow"><div class="ttl">年末年始（12/29〜1/3）を休園</div></div><input type="checkbox" id="closeNY" style="width:22px;height:22px"></div>
+        <div id="closedList"></div>
+        <div class="row"><input type="date" id="closedAdd" class="tin" style="flex:1"><button class="btn" id="closedAddBtn">追加</button></div>
+      </div>
+      <p class="note" style="margin:-6px 0 14px">日曜・祝日はシフト表に表示されません。ほかに休園する日があれば追加してください。</p>
+
+      <h2>役職</h2>
+      <div class="card" id="roleList"></div>
+      <div class="actions" style="padding:0 0 10px"><button class="btn" id="addRole">＋ 役職を追加</button></div>
+
+      <h2>休みの区分</h2>
+      <div class="card" id="offList"></div>
+      <div class="actions" style="padding:0 0 10px"><button class="btn" id="addOff">＋ 区分を追加</button></div>
+
+      <h2>バックアップ</h2>
+      <div class="card">
+        <div class="row"><div class="grow"><div class="ttl">データを書き出す</div><div class="meta">全データをファイルに保存（「ファイル」アプリ等へ）</div></div><button class="btn" id="exportBtn">書き出し</button></div>
+        <div class="row"><div class="grow"><div class="ttl">データを読み込む</div><div class="meta">書き出したファイルから復元（現在のデータは置き換え）</div></div><button class="btn" id="importBtn">読み込み</button></div>
+      </div>
+      <input type="file" id="importFile" accept=".json,application/json" hidden>
+      <p class="note">データはこのiPhone（ブラウザ）の中だけに保存されます。機種変更・ブラウザのデータ削除に備えて、定期的に「書き出し」をしてください。ホーム画面に追加して使うと消えにくくなります。</p>
+    </div>
+  </section>
+</main>
+
+<nav class="tabbar">
+  <button data-tab="shift" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/></svg>シフト</button>
+  <button data-tab="staff"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5"/><circle cx="17" cy="9" r="2.5"/><path d="M17.5 14c2 .3 3.4 1.9 4 4.5"/></svg>職員</button>
+  <button data-tab="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg>設定</button>
+</nav>
+
+<div class="overlay" id="overlay"></div>
+<div class="sheet" id="sheet"></div>
+<div class="toast" id="toast"></div>
+<div id="printArea"></div>
+
+<script>
+'use strict';
+/* ========== 基本設定 ========== */
+const KEY = 'hoikuShift_v2';
+const START = '2026-11-01';          // 使用開始日
+const FY_MIN = 2026, FY_MAX = 2035;  // 選べる年度
+const REQ = '希望休';
+const SAT_NEED = 2;        // 土曜の人数（固定）
+const WD = ['日','月','火','水','木','金','土'];
+const uid = () => Math.random().toString(36).slice(2, 10);
+const pad = n => String(n).padStart(2,'0');
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+const DEFAULT = () => ({
+  facility: '○○保育園',
+  std: {s:'08:00', e:'18:00', b:60},
+  minPerDay: 0,
+  closeNY: true,
+  closedDays: [],
+  roles: ['園長','副園長','主任保育士','保育士','看護師','栄養士','調理員','事務員','パート'],
+  offTypes: ['休','有給','研修'],
+  staff: [],      // {id,name,role,memo,satMax(null=制限なし/0=対象外/1..),noConsec,retired}
+  shifts: {}      // { staffId: { 'YYYY-MM-DD': {s,e,b,auto?} | {off} } }
+});
+
+let data;
+function load(){
+  try{ data = JSON.parse(localStorage.getItem(KEY)); }catch(e){ data = null; }
+  if(!data || !Array.isArray(data.staff)) data = DEFAULT();
+  data = Object.assign(DEFAULT(), data);
+}
+function save(){
+  try{ localStorage.setItem(KEY, JSON.stringify(data)); }
+  catch(e){ alert('保存に失敗しました。容量不足の可能性があります。'); }
+}
+function pref(k, v){
+  try{ if(v === undefined) return localStorage.getItem('hoikuShiftPref_'+k); localStorage.setItem('hoikuShiftPref_'+k, v); }catch(e){ return null; }
+}
+
+/* ========== 祝日・営業日 ========== */
+const holCache = {};
+function holidays(y){
+  if(holCache[y]) return holCache[y];
+  const h = new Set();
+  const add = (m,d) => h.add(`${m}-${d}`);
+  const nthMon = (m,n) => { const f = new Date(y,m-1,1).getDay(); return 1 + ((8 - f) % 7) + (n-1)*7; };
+  const spring = Math.floor(20.8431 + 0.242194*(y-1980) - Math.floor((y-1980)/4));
+  const autumn = Math.floor(23.2488 + 0.242194*(y-1980) - Math.floor((y-1980)/4));
+  add(1,1); add(1,nthMon(1,2)); add(2,11); add(2,23); add(3,spring); add(4,29); add(5,3); add(5,4); add(5,5);
+  add(7,nthMon(7,3)); add(8,11); add(9,nthMon(9,3)); add(9,autumn); add(10,nthMon(10,2)); add(11,3); add(11,23);
+  const key = dt => `${dt.getMonth()+1}-${dt.getDate()}`;
+  const base = [...h].map(k => { const [m,d] = k.split('-').map(Number); return new Date(y,m-1,d); }).sort((a,b)=>a-b);
+  for(let i=0;i<base.length-1;i++){
+    const mid = new Date(base[i]); mid.setDate(mid.getDate()+1);
+    const nxt = new Date(mid); nxt.setDate(nxt.getDate()+1);
+    if(key(nxt) === key(base[i+1]) && !h.has(key(mid)) && mid.getDay() !== 0) h.add(key(mid));
+  }
+  for(const dt of base){
+    if(dt.getDay() === 0){
+      const n = new Date(dt); n.setDate(n.getDate()+1);
+      while(h.has(key(n))) n.setDate(n.getDate()+1);
+      h.add(key(n));
+    }
+  }
+  return holCache[y] = h;
+}
+function isClosed(y,m,d,ds){
+  if(holidays(y).has(`${m}-${d}`)) return true;
+  if(data.closeNY && ((m===12 && d>=29) || (m===1 && d<=3))) return true;
+  return data.closedDays.includes(ds);
+}
+// 年度の営業日（月〜土、祝日・休園日を除く）
+function openDays(fy){
+  const res = [];
+  const dt = new Date(fy, 3, 1), end = new Date(fy+1, 2, 31);
+  for(; dt <= end; dt.setDate(dt.getDate()+1)){
+    const y = dt.getFullYear(), m = dt.getMonth()+1, d = dt.getDate(), w = dt.getDay();
+    const ds = `${y}-${pad(m)}-${pad(d)}`;
+    if(ds < START || w === 0 || isClosed(y,m,d,ds)) continue;
+    res.push({y, m, d, w, ds});
+  }
+  return res;
+}
+const fyOf = (y,m) => m >= 4 ? y : y-1;
+function fyLabel(fy){
+  return `${fy === FY_MIN ? '2026/11' : fy + '/4'}〜${fy+1}/3`;
+}
+
+/* ========== 状態 ========== */
+const today = new Date();
+const todayStr = `${today.getFullYear()}-${pad(today.getMonth()+1)}-${pad(today.getDate())}`;
+let fy = Math.min(FY_MAX, Math.max(FY_MIN, fyOf(today.getFullYear(), today.getMonth()+1)));
+let mode = pref('mode') === 'sat' ? 'sat' : 'all';
+let brush = null;      // null | {type:'work'} | {type:'off', name} | {type:'clear'}
+let days = [], cols = [];
+
+// 土曜の月あたり上限（null=制限なし、0=割り振らない）
+const satMaxOf = s => s.noSat ? 0 : (s.satMax === undefined || s.satMax === '' ? null : s.satMax);
+const satLabel = s => { const m = satMaxOf(s); return m === 0 ? '土曜対象外' : m === null ? '' : `土曜 月${m}回まで`; };
+const activeStaff = () => data.staff.filter(s => !s.retired);
+const getShift = (sid, ds) => data.shifts[sid] && data.shifts[sid][ds];
+function setShift(sid, ds, v){
+  if(!data.shifts[sid]) data.shifts[sid] = {};
+  if(v) data.shifts[sid][ds] = v; else delete data.shifts[sid][ds];
+}
+const working = v => !!(v && v.s);
+const toMin = t => { const [h,mm] = t.split(':').map(Number); return h*60 + mm; };
+function workMin(v){
+  if(!working(v)) return 0;
+  let m = toMin(v.e) - toMin(v.s); if(m < 0) m += 1440;
+  return Math.max(0, m - (Number(v.b) || 0));
+}
+const fmtT = t => { const [h,mm] = t.split(':'); return mm === '00' ? String(Number(h)) : `${Number(h)}:${mm}`; };
+const stdShift = () => ({s:data.std.s, e:data.std.e, b:Number(data.std.b)||0});
+const isStd = v => v.s === data.std.s && v.e === data.std.e;
+
+/* ========== シフト表 ========== */
+function renderHeader(){
+  document.getElementById('facilityLabel').textContent = data.facility;
+  document.getElementById('yearLabel').innerHTML = `${fy}年度<small>${fyLabel(fy)}</small>`;
+  document.getElementById('prevY').disabled = fy <= FY_MIN;
+  document.getElementById('nextY').disabled = fy >= FY_MAX;
+}
+function renderTools(){
+  document.querySelectorAll('#modeSeg button').forEach(b => b.classList.toggle('on', b.dataset.mode === mode));
+  const months = [...new Set(days.map(c => c.m))];
+  document.getElementById('monthChips').innerHTML = months.map(m => `<button class="chip sm" data-jump="${m}">${m}月</button>`).join('');
+  const bb = document.getElementById('brushbar');
+  const on = (t,n) => brush && brush.type === t && (n === undefined || brush.name === n) ? 'on' : '';
+  bb.innerHTML =
+    `<button class="chip ${brush?'':'on'}" data-b="none">✎ 個別入力</button>` +
+    `<button class="chip ${on('work')}" data-b="work">出勤 ${fmtT(data.std.s)}-${fmtT(data.std.e)}</button>` +
+    `<button class="chip req ${on('off',REQ)}" data-b="off" data-name="${REQ}">希望休</button>` +
+    data.offTypes.map(o => `<button class="chip ${on('off',o)}" data-b="off" data-name="${esc(o)}">${esc(o)}</button>`).join('') +
+    `<button class="chip ${on('clear')}" data-b="clear">消去</button>`;
+  document.getElementById('hint').textContent = brush
+    ? '選んだ内容を、マスをタップして続けて入力できます'
+    : 'マスをタップして入力／上の項目を選ぶと続けて入力できます';
+}
+function cellInner(v){
+  if(!v) return '';
+  if(v.off) return `<div class="in off ${v.off===REQ?'req':v.off.includes('有')?'paid':''}">${esc(v.off)}</div>`;
+  if(v.s) return `<div class="in ${isStd(v)?'std':'chg'} ${v.auto?'auto':''}"><span>${fmtT(v.s)}</span><span class="t2">${fmtT(v.e)}</span></div>`;
+  return '';
+}
+const dayNo = ds => Date.UTC(+ds.slice(0,4), +ds.slice(5,7)-1, +ds.slice(8,10)) / 86400000;
+const dsOf = n => new Date(n * 86400000).toISOString().slice(0,10);
+// ds の前日から何日続けて出勤しているか
+function runBefore(sid, ds){
+  let n = 0, k = dayNo(ds) - 1;
+  while(working(getShift(sid, dsOf(k)))){ n++; k--; }
+  return n;
+}
+// 6日以上の連続勤務の回数
+function longRuns(sid){
+  let runs = 0, len = 0, prev = null;
+  const ks = Object.keys(data.shifts[sid] || {}).filter(k => working(data.shifts[sid][k]) && days.length && k >= days[0].ds && k <= days[days.length-1].ds).sort();
+  for(const k of ks){ const n = dayNo(k); len = (prev !== null && n === prev + 1) ? len + 1 : 1; if(len === 6) runs++; prev = n; }
+  return runs;
+}
+function staffTotals(sid){
+  let n = 0, sat = 0;
+  for(const c of days){ const v = getShift(sid, c.ds); if(working(v)){ n++; if(c.w === 6) sat++; } }
+  return {n, sat};
+}
+const totHTML = sid => { const t = staffTotals(sid), r = longRuns(sid); return `${t.n}日<br>土${t.sat}${r?`<br><span style="color:#b91c1c">6連${r}</span>`:''}`; };
+const dayCount = ds => activeStaff().filter(st => working(getShift(st.id, ds))).length;
+
+function renderGrid(keepScroll){
+  const wrap = document.getElementById('tablewrap');
+  const staff = activeStaff();
+  if(!staff.length){ wrap.innerHTML = `<div class="empty">職員が登録されていません。<br>下の「職員」タブから登録してください。</div>`; return; }
+  if(!cols.length){ wrap.innerHTML = `<div class="empty">この年度に表示する日がありません。</div>`; return; }
+  const groups = [];
+  for(const c of cols){ const g = groups[groups.length-1]; if(g && g.m === c.m) g.n++; else groups.push({y:c.y, m:c.m, n:1}); }
+  let h = '<table class="grid"><thead><tr class="mrow"><th class="name" rowspan="2">氏名／役職</th>';
+  h += groups.map(g => `<th colspan="${g.n}" class="ms" data-mh="${g.m}">${g.y}年${g.m}月</th>`).join('');
+  h += '<th class="tot" rowspan="2">年度<br>計</th></tr><tr class="drow">';
+  let prevM = null;
+  for(const c of cols){
+    const ms = c.m !== prevM ? 'ms' : ''; prevM = c.m;
+    c.cls = `${c.w===6?'sat':''} ${ms} ${c.ds===todayStr?'today':''}`;
+    h += `<th class="${c.cls}">${c.d}<small>${WD[c.w]}</small></th>`;
+  }
+  h += '</tr></thead><tbody>';
+  for(const st of staff){
+    h += `<tr><td class="name"><b>${esc(st.name)}</b><span>${esc(st.role||'')}</span></td>`;
+    for(const c of cols) h += `<td class="c ${c.cls}" data-s="${st.id}" data-k="${c.ds}">${cellInner(getShift(st.id, c.ds))}</td>`;
+    h += `<td class="tot" data-t="${st.id}">${totHTML(st.id)}</td></tr>`;
+  }
+  h += '</tbody><tfoot><tr><td class="name">出勤人数</td>';
+  for(const c of cols) h += `<td class="${c.w===6?'sat':''} ${c.cls.includes('ms')?'ms':''}" data-f="${c.ds}">${dayCount(c.ds)}</td>`;
+  h += '<td class="tot"></td></tr></tfoot></table>';
+  const sl = wrap.scrollLeft, stp = wrap.scrollTop;
+  wrap.innerHTML = h;
+  markShort();
+  if(keepScroll){ wrap.scrollLeft = sl; wrap.scrollTop = stp; }
+}
+function markShort(){
+  const min = Number(data.minPerDay) || 0;
+  document.querySelectorAll('#tablewrap tfoot td[data-f]').forEach(td => td.classList.toggle('short', min > 0 && Number(td.textContent) < min));
+}
+function refreshCell(sid, ds){
+  const wrap = document.getElementById('tablewrap');
+  const td = wrap.querySelector(`td.c[data-s="${sid}"][data-k="${ds}"]`);
+  if(td) td.innerHTML = cellInner(getShift(sid, ds));
+  const t = wrap.querySelector(`td.tot[data-t="${sid}"]`); if(t) t.innerHTML = totHTML(sid);
+  const f = wrap.querySelector(`td[data-f="${ds}"]`); if(f){ f.textContent = dayCount(ds); markShort(); }
+}
+function jumpTo(m){
+  const wrap = document.getElementById('tablewrap');
+  const th = wrap.querySelector(`th[data-mh="${m}"]`); if(!th) return;
+  wrap.scrollLeft = th.offsetLeft - 92;
+}
+function renderShift(scrollToNow){
+  days = openDays(fy);
+  cols = mode === 'sat' ? days.filter(c => c.w === 6) : days;
+  renderHeader(); renderTools(); renderGrid(!scrollToNow);
+  if(scrollToNow){
+    const t = today.getMonth()+1;
+    if(fyOf(today.getFullYear(), t) === fy) jumpTo(t); else document.getElementById('tablewrap').scrollLeft = 0;
+  }
+}
+
+/* ========== 入力 ========== */
+const overlay = document.getElementById('overlay'), sheet = document.getElementById('sheet');
+function openSheet(html, mode, extra={}){
+  sheet.innerHTML = html; sheet.dataset.mode = mode;
+  for(const k in extra) sheet.dataset[k] = extra[k];
+  overlay.classList.add('show'); requestAnimationFrame(() => sheet.classList.add('show'));
+}
+function closeSheet(){ sheet.classList.remove('show'); overlay.classList.remove('show'); sheet.dataset.mode = ''; }
+overlay.addEventListener('click', closeSheet);
+
+function openCell(sid, ds){
+  const st = data.staff.find(s => s.id === sid); if(!st) return;
+  const i = cols.findIndex(c => c.ds === ds); const c = cols[i];
+  const v = getShift(sid, ds) || {};
+  const s = v.s || data.std.s, e = v.e || data.std.e, b = v.s ? (v.b ?? 0) : (data.std.b ?? 60);
+  const offs = [REQ, ...data.offTypes.filter(o => o !== REQ)];
+  openSheet(`
+    <div class="navday">
+      <button data-act="go" data-i="${i-1}" ${i<=0?'disabled':''}>‹ 前の日</button>
+      <button data-act="go" data-i="${i+1}" ${i>=cols.length-1?'disabled':''}>次の日 ›</button>
+    </div>
+    <h3>${esc(st.name)} <span style="font-size:13px;color:var(--main)">${esc(st.role||'')}</span></h3>
+    <div class="sub">${c.y}年${c.m}月${c.d}日（${WD[c.w]}）</div>
+    <button class="bigwork" data-act="work">出勤 ${fmtT(data.std.s)}〜${fmtT(data.std.e)}</button>
+    <label class="lb">時間を変更する</label>
+    <div class="grid3">
+      <div><input type="time" id="inS" value="${s}" step="300"><div class="cap">開始</div></div>
+      <div><input type="time" id="inE" value="${e}" step="300"><div class="cap">終了</div></div>
+      <div><input type="number" id="inB" value="${b}" min="0" step="5" inputmode="numeric"><div class="cap">休憩(分)</div></div>
+    </div>
+    <button class="btn pri" data-act="time" style="width:100%;margin-top:8px">この時間で設定</button>
+    <label class="lb">休み</label>
+    <div class="offs">${offs.map(o => `<button class="chip ${o===REQ?'req':''} ${v.off===o?'on':''}" data-act="off" data-name="${esc(o)}">${esc(o)}</button>`).join('')}</div>
+    <div class="foot">
+      <button class="btn danger" data-act="clear">消去</button>
+      <button class="btn" data-act="close">閉じる</button>
+    </div>`, 'cell', {sid, ds});
+}
+function afterSet(sid, ds){
+  save(); refreshCell(sid, ds);
+  const i = cols.findIndex(c => c.ds === ds);
+  if(i >= 0 && i < cols.length-1) openCell(sid, cols[i+1].ds); else closeSheet();
+}
+sheet.addEventListener('click', ev => {
+  if(sheet.dataset.mode !== 'cell') return;
+  const b = ev.target.closest('[data-act]'); if(!b || b.disabled) return;
+  const sid = sheet.dataset.sid, ds = sheet.dataset.ds, act = b.dataset.act;
+  if(act === 'close') return closeSheet();
+  if(act === 'go') return openCell(sid, cols[Number(b.dataset.i)].ds);
+  if(act === 'work'){ setShift(sid, ds, stdShift()); return afterSet(sid, ds); }
+  if(act === 'time'){
+    const s = document.getElementById('inS').value, e = document.getElementById('inE').value;
+    if(!s || !e) return toast('開始・終了時刻を入力してください');
+    setShift(sid, ds, {s, e, b:Number(document.getElementById('inB').value)||0}); return afterSet(sid, ds);
+  }
+  if(act === 'off'){ setShift(sid, ds, {off:b.dataset.name}); return afterSet(sid, ds); }
+  if(act === 'clear'){ setShift(sid, ds, null); save(); refreshCell(sid, ds); closeSheet(); }
+});
+
+document.getElementById('tablewrap').addEventListener('click', ev => {
+  const td = ev.target.closest('td.c[data-s]'); if(!td) return;
+  const sid = td.dataset.s, ds = td.dataset.k;
+  if(!brush) return openCell(sid, ds);
+  if(brush.type === 'work') setShift(sid, ds, stdShift());
+  else if(brush.type === 'off') setShift(sid, ds, {off:brush.name});
+  else setShift(sid, ds, null);
+  save(); refreshCell(sid, ds);
+});
+document.getElementById('brushbar').addEventListener('click', ev => {
+  const c = ev.target.closest('.chip'); if(!c) return;
+  const t = c.dataset.b;
+  brush = t === 'none' ? null : t === 'off' ? {type:'off', name:c.dataset.name} : {type:t};
+  renderTools();
+});
+document.getElementById('modeSeg').addEventListener('click', ev => {
+  const b = ev.target.closest('[data-mode]'); if(!b) return;
+  mode = b.dataset.mode; pref('mode', mode); renderShift(true);
+});
+document.getElementById('monthChips').addEventListener('click', ev => {
+  const b = ev.target.closest('[data-jump]'); if(b) jumpTo(Number(b.dataset.jump));
+});
+
+/* ========== 年度移動 ========== */
+document.getElementById('prevY').onclick = () => { if(fy > FY_MIN){ fy--; renderShift(true); } };
+document.getElementById('nextY').onclick = () => { if(fy < FY_MAX){ fy++; renderShift(true); } };
+document.getElementById('thisY').onclick = () => {
+  fy = Math.min(FY_MAX, Math.max(FY_MIN, fyOf(today.getFullYear(), today.getMonth()+1)));
+  document.querySelector('.tabbar [data-tab=shift]').click(); renderShift(true);
+};
+
+/* ========== 月の範囲選択（共通） ========== */
+function monthOptions(){
+  const ms = []; for(const c of days){ const k = `${c.y}-${pad(c.m)}`; if(!ms.includes(k)) ms.push(k); }
+  return ms;
+}
+function rangeHTML(){
+  const ms = monthOptions();
+  const o = sel => ms.map((k,i) => `<option value="${k}" ${i===sel?'selected':''}>${Number(k.slice(0,4))}年${Number(k.slice(5))}月</option>`).join('');
+  return `<div class="grid2"><div><select id="rFrom">${o(0)}</select><div class="cap">から</div></div><div><select id="rTo">${o(ms.length-1)}</select><div class="cap">まで</div></div></div>`;
+}
+function readRange(){
+  let a = document.getElementById('rFrom').value, b = document.getElementById('rTo').value;
+  if(a > b) [a,b] = [b,a];
+  return c => { const k = `${c.y}-${pad(c.m)}`; return k >= a && k <= b; };
+}
+
+/* ========== 一括入力 ========== */
+document.getElementById('bulkBtn').onclick = () => {
+  const staff = activeStaff();
+  if(!staff.length) return toast('職員を登録してください');
+  openSheet(`
+    <h3>一括入力</h3>
+    <div class="sub">空欄のマスだけに「出勤 ${fmtT(data.std.s)}〜${fmtT(data.std.e)}」を入れます。入力済みのマスは変わりません。</div>
+    <label class="lb">期間</label>${rangeHTML()}
+    <label class="lb">曜日</label>
+    <div class="checks">${[1,2,3,4,5,6].map(w => `<label><input type="checkbox" name="bw" value="${w}" ${w<6?'checked':''}>${WD[w]}</label>`).join('')}</div>
+    <label class="lb">職員 <button class="chip sm" data-act="all" style="margin-left:6px">全員</button> <button class="chip sm" data-act="none">解除</button></label>
+    <div class="checks">${staff.map(s => `<label><input type="checkbox" name="bs" value="${s.id}" checked>${esc(s.name)}</label>`).join('')}</div>
+    <div class="foot"><button class="btn" data-act="close">キャンセル</button><button class="btn pri" data-act="run">入力する</button></div>`, 'bulk');
+};
+sheet.addEventListener('click', ev => {
+  if(sheet.dataset.mode !== 'bulk') return;
+  const b = ev.target.closest('[data-act]'); if(!b) return;
+  const act = b.dataset.act;
+  if(act === 'close') return closeSheet();
+  if(act === 'all' || act === 'none'){ ev.preventDefault(); sheet.querySelectorAll('input[name=bs]').forEach(x => x.checked = act === 'all'); return; }
+  if(act === 'run'){
+    const inR = readRange();
+    const ws = [...sheet.querySelectorAll('input[name=bw]:checked')].map(x => Number(x.value));
+    const ids = [...sheet.querySelectorAll('input[name=bs]:checked')].map(x => x.value);
+    if(!ws.length || !ids.length) return toast('曜日と職員を選んでください');
+    let n = 0;
+    for(const c of days){
+      if(!inR(c) || !ws.includes(c.w)) continue;
+      for(const id of ids) if(!getShift(id, c.ds)){ setShift(id, c.ds, stdShift()); n++; }
+    }
+    save(); closeSheet(); renderGrid(true); toast(`${n}マスに入力しました`);
+  }
+});
+
+/* ========== 土曜の自動割り振り（年度単位） ========== */
+document.getElementById('autoSat').onclick = () => {
+  const cand = activeStaff().filter(s => satMaxOf(s) !== 0);
+  if(!cand.length) return toast('土曜に割り振れる職員がいません');
+  openSheet(`
+    <h3>土曜の自動割り振り</h3>
+    <div class="sub">${fy}年度　土曜 2名／${fmtT(data.std.s)}〜${fmtT(data.std.e)}（時間は「設定」で変更）</div>
+    <label class="lb">割り振る期間</label>${rangeHTML()}
+    <p class="note" style="margin-top:12px">・年度内の土曜出勤の回数を全員そろえます（期間外の土曜の出勤も回数に含めます）<br>・そのうえで、2週連続の土曜と6連勤をできるだけ避けます<br>・手入力した出勤・休み・希望休はそのまま残します<br>・期間内で前回自動で入れた分は入れ直します<br>・対象：${cand.length}名（土曜対象外の職員は除く）</p>
+    <div class="foot"><button class="btn" data-act="close">キャンセル</button><button class="btn pri" data-act="run">割り振る</button></div>`, 'auto');
+};
+sheet.addEventListener('click', ev => {
+  if(sheet.dataset.mode !== 'auto') return;
+  const b = ev.target.closest('[data-act]'); if(!b) return;
+  if(b.dataset.act === 'close') return closeSheet();
+  if(b.dataset.act === 'run'){ const r = readRange(); b.textContent = '計算中…'; b.disabled = true; setTimeout(() => runAuto(r), 50); }
+});
+function runAuto(inR){
+  const allSat = days.filter(c => c.w === 6);
+  const sats = allSat.filter(inR);
+  if(!sats.length){ closeSheet(); return toast('期間内に土曜がありません'); }
+  const staff = activeStaff(), tgt = staff.filter(s => satMaxOf(s) !== 0);
+  // 期間内の自動分を消す
+  for(const st of data.staff) for(const c of sats){ const v = getShift(st.id, c.ds); if(v && v.auto) setShift(st.id, c.ds, null); }
+  const satIdx = {}; allSat.forEach((c,i) => satIdx[c.ds] = i);
+  const isAdj = (a, b) => b && dayNo(b.ds) - dayNo(a.ds) === 7;      // 2週連続か
+  // その週の月〜金を5日続けて出勤しているか（土曜に入ると6連勤）
+  const six = {};
+  for(const st of tgt){ six[st.id] = {}; for(const c of allSat) six[st.id][c.ds] = runBefore(st.id, c.ds) >= 5; }
+  const cnt = {}, rnd = {};
+  for(const st of tgt){ cnt[st.id] = allSat.filter(c => working(getShift(st.id, c.ds))).length; rnd[st.id] = Math.random(); }
+  const worksSat = (id, c) => !!c && working(getShift(id, c.ds));
+  const adjCount = (id, c) => { const i = satIdx[c.ds]; let n = 0;
+    if(isAdj(allSat[i-1] || c, c) && worksSat(id, allSat[i-1])) n++;
+    if(isAdj(c, allSat[i+1]) && worksSat(id, allSat[i+1])) n++; return n; };
+  // 職員ごとのコスト：①土曜回数の偏り（最優先） ②2週連続の土曜 ③6連勤
+  function cost(id){
+    let n = 0, con = 0, sx = 0, prev = null;
+    for(const c of allSat){
+      if(!working(getShift(id, c.ds))) continue;
+      n++; if(prev && isAdj(prev, c)) con++; if(six[id][c.ds]) sx++; prev = c;
+    }
+    return 10000*n*n + 30*con + 4*sx;
+  }
+  const need = c => Math.max(0, SAT_NEED - staff.filter(st => working(getShift(st.id, c.ds))).length);
+  const avail = (st, c) => !getShift(st.id, c.ds);
+  // 職員ごとの条件（月の上限・2週連続なし）を満たして入れられるか
+  const ok = (st, c) => {
+    if(getShift(st.id, c.ds)) return false;
+    const mx = satMaxOf(st);
+    if(mx !== null && allSat.filter(x => x.y === c.y && x.m === c.m && worksSat(st.id, x)).length >= mx) return false;
+    if(st.noConsec){ const i = satIdx[c.ds];
+      if((isAdj(allSat[i-1] || c, c) && worksSat(st.id, allSat[i-1])) || (isAdj(c, allSat[i+1]) && worksSat(st.id, allSat[i+1]))) return false; }
+    return true;
+  };
+  const isAuto = (st, c) => { const v = getShift(st.id, c.ds); return !!(v && v.auto); };
+  const put = (st, c) => { setShift(st.id, c.ds, {...stdShift(), auto:true}); cnt[st.id]++; };
+  const take = (st, c) => { setShift(st.id, c.ds, null); cnt[st.id]--; };
+  // ① まず順番に埋める（回数が少ない人 → 2週連続にならない人 → 6連勤にならない人）
+  for(const c of sats){
+    tgt.filter(s => ok(s, c))
+       .sort((a,b) => cnt[a.id]-cnt[b.id] || adjCount(a.id,c)-adjCount(b.id,c) || six[a.id][c.ds]-six[b.id][c.ds] || rnd[a.id]-rnd[b.id])
+       .slice(0, need(c)).forEach(s => put(s, c));
+  }
+  // ② 入れ替えを繰り返して改善（悪くならない入れ替えだけ採用）
+  const rand = arr => arr[Math.floor(Math.random()*arr.length)];
+  const N = Math.min(60000, 3000 + sats.length * tgt.length * 60);
+  for(let it = 0; it < N; it++){
+    const c1 = rand(sats);
+    const as = tgt.filter(s => isAuto(s, c1)); if(!as.length) continue;
+    const a = rand(as);
+    if(Math.random() < 0.5){
+      // 交代：c1 の a を b に替える
+      const bs = tgt.filter(s => ok(s, c1)); if(!bs.length) continue;
+      const b = rand(bs);
+      const before = cost(a.id) + cost(b.id);
+      take(a, c1); put(b, c1);
+      if(cost(a.id) + cost(b.id) > before){ take(b, c1); put(a, c1); }
+    }else{
+      // 交換：a の c1 と b の c2 を入れ替える（回数は変わらない）
+      const c2 = rand(sats); if(c2 === c1 || !avail(a, c2)) continue;
+      const bs = tgt.filter(s => s !== a && isAuto(s, c2) && avail(s, c1)); if(!bs.length) continue;
+      const b = rand(bs);
+      const before = cost(a.id) + cost(b.id);
+      take(a, c1); take(b, c2);
+      if(!ok(a, c2) || !ok(b, c1)){ put(a, c1); put(b, c2); continue; }
+      put(a, c2); put(b, c1);
+      if(cost(a.id) + cost(b.id) > before){ take(a, c2); take(b, c1); put(a, c1); put(b, c2); }
+    }
+  }
+  save(); renderGrid(true);
+  // 結果
+  const stat = id => { let con = 0, sx = 0, prev = null;
+    for(const c of allSat){ if(!working(getShift(id, c.ds))) continue; if(prev && isAdj(prev, c)) con++; if(six[id][c.ds]) sx++; prev = c; }
+    return {con, sx}; };
+  const short = sats.map(c => [c, need(c)]).filter(([,n]) => n > 0);
+  const free = tgt.filter(s => satMaxOf(s) === null);
+  const vals = (free.length ? free : tgt).map(s => cnt[s.id]);
+  let tc = 0, ts = 0;
+  const rows = tgt.slice().sort((a,b) => cnt[b.id]-cnt[a.id]).map(s => {
+    const r = stat(s.id); tc += r.con; ts += r.sx;
+    return `<div class="stat"><span>${esc(s.name)} <small style="color:var(--main)">${esc(s.role||'')}</small>${satLabel(s)||s.noConsec?`<br><small style="color:var(--sub)">${[satLabel(s), s.noConsec?'連続なし':''].filter(Boolean).join('・')}</small>`:''}</span><span>土曜 ${cnt[s.id]}回<br><small style="color:${r.con||r.sx?'#b45309':'var(--sub)'}">連続${r.con}・6連勤${r.sx}</small></span></div>`;
+  }).join('');
+  openSheet(`
+    <h3>割り振り結果</h3>
+    <div class="sub">${fy}年度の土曜出勤回数${free.length && free.length < tgt.length ? '（制限なしの職員）' : ''}：最多${Math.max(...vals)}回／最少${Math.min(...vals)}回<br>2週連続の土曜：${tc}件　6連勤：${ts}件</div>
+    ${short.length ? `<div class="alert">2名そろわない土曜があります：<br>${short.map(([c,n]) => `${c.m}/${c.d}　あと${n}名`).join('<br>')}<br>希望休などで入れる人がいません。手で調整してください。</div>` : ''}
+    <div>${rows}</div>
+    <p class="note" style="margin-top:10px">・6連勤は、その週の月〜金をすべて出勤している人が土曜に入った場合です。平日に休みのある人を優先して入れていますが、土曜回数をそろえることを優先しています。<br>・自動で入れたマスは緑の枠で表示されます。もう一度割り振ると別の組み合わせになります。</p>
+    <div class="foot"><button class="btn pri" data-act="rclose">閉じる</button></div>`, 'result');
+}
+sheet.addEventListener('click', ev => { if(sheet.dataset.mode === 'result' && ev.target.closest('[data-act=rclose]')) closeSheet(); });
+document.getElementById('clearAuto').onclick = () => {
+  const hits = [];
+  for(const st of data.staff) for(const c of days){ const v = getShift(st.id, c.ds); if(v && v.auto) hits.push([st.id, c.ds]); }
+  const n = hits.length;
+  if(!n) return toast('自動で入れたシフトはありません');
+  if(!confirm(`${fy}年度の自動で入れた土曜（${n}件）を消します。よろしいですか？`)) return;
+  hits.forEach(([id, ds]) => setShift(id, ds, null));
+  save(); renderGrid(true); toast(`${n}件をクリアしました`);
+};
+
+/* ========== 印刷・CSV ========== */
+document.getElementById('printBtn').onclick = () => {
+  const staff = activeStaff();
+  const months = monthOptions();
+  const t = `${today.getFullYear()}/${today.getMonth()+1}/${today.getDate()}`;
+  let h = '';
+  for(const k of months){
+    const y = Number(k.slice(0,4)), m = Number(k.slice(5));
+    const md = days.filter(c => c.y === y && c.m === m);
+    h += `<div class="pmonth"><div class="ptitle"><span>${esc(data.facility)}　${y}年${m}月 勤務表</span><span>作成日 ${t}</span></div>`;
+    h += `<table class="pt"><thead><tr><th class="pn">氏名</th>${md.map(c => `<th class="${c.w===6?'sat':''}">${c.d}<br>${WD[c.w]}</th>`).join('')}<th class="ptot">日数</th></tr></thead><tbody>`;
+    for(const st of staff){
+      let n = 0;
+      h += `<tr><td class="pn">${esc(st.name)}<br><small>${esc(st.role||'')}</small></td>`;
+      for(const c of md){
+        const v = getShift(st.id, c.ds);
+        if(v && v.off) h += `<td class="${v.off===REQ?'req':'off'}">${esc(v.off)}</td>`;
+        else if(working(v)){ n++; h += `<td class="${isStd(v)?(c.w===6?'sat':''):'chg'}">${fmtT(v.s)}<br>${fmtT(v.e)}</td>`; }
+        else h += `<td class="${c.w===6?'sat':''}"></td>`;
+      }
+      h += `<td>${n}</td></tr>`;
+    }
+    h += `<tr><td class="pn">出勤人数</td>${md.map(c => `<td>${dayCount(c.ds)}</td>`).join('')}<td></td></tr></tbody></table></div>`;
+  }
+  document.getElementById('printArea').innerHTML = h;
+  window.print();
+};
+document.getElementById('csvBtn').onclick = () => {
+  const rows = [['氏名','役職', ...days.map(c => `${c.m}/${c.d}(${WD[c.w]})`), '出勤日数','土曜回数','勤務時間']];
+  for(const st of activeStaff()){
+    let n = 0, sat = 0, min = 0; const r = [st.name, st.role||''];
+    for(const c of days){
+      const v = getShift(st.id, c.ds);
+      if(v && v.off) r.push(v.off);
+      else if(working(v)){ r.push(`${v.s}-${v.e}`); n++; if(c.w===6) sat++; min += workMin(v); }
+      else r.push('');
+    }
+    r.push(n, sat, (min/60).toFixed(2)); rows.push(r);
+  }
+  const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\r\n');
+  download(`shift_${fy}年度.csv`, '﻿' + csv, 'text/csv');
+};
+
+/* ========== 職員 ========== */
+function renderStaff(){
+  const showRet = document.getElementById('showRetired').checked;
+  const list = data.staff.map((st,i) => ({st,i})).filter(({st}) => showRet || !st.retired);
+  const el = document.getElementById('staffList');
+  if(!list.length){ el.innerHTML = `<div class="empty" style="padding:24px">職員が登録されていません</div>`; return; }
+  el.innerHTML = list.map(({st,i}) => `
+    <div class="row">
+      <div class="grow" data-edit="${st.id}" style="cursor:pointer">
+        <div class="ttl">${esc(st.name)} ${st.retired?'<span class="badge gray">退職</span>':''} ${satLabel(st)?`<span class="badge gray">${satLabel(st)}</span>`:''} ${st.noConsec?'<span class="badge gray">連続なし</span>':''}</div>
+        <div class="meta">${esc(st.role||'役職なし')}${st.memo?'・'+esc(st.memo):''}</div>
+      </div>
+      <button class="mini" data-up="${i}" ${i===0?'disabled':''}>↑</button>
+      <button class="mini" data-down="${i}" ${i===data.staff.length-1?'disabled':''}>↓</button>
+    </div>`).join('');
+}
+document.getElementById('showRetired').onchange = renderStaff;
+document.getElementById('staffList').addEventListener('click', ev => {
+  const e = ev.target.closest('[data-edit]'); if(e) return openStaff(e.dataset.edit);
+  const u = ev.target.closest('[data-up]'), dn = ev.target.closest('[data-down]');
+  const i = u ? Number(u.dataset.up) : dn ? Number(dn.dataset.down) : -1; if(i < 0) return;
+  const j = u ? i-1 : i+1; if(j < 0 || j >= data.staff.length) return;
+  [data.staff[i], data.staff[j]] = [data.staff[j], data.staff[i]];
+  save(); renderStaff(); renderGrid(true);
+});
+document.getElementById('addStaff').onclick = () => openStaff(null);
+function openStaff(id){
+  const st = id ? data.staff.find(s => s.id === id) : {name:'', role:'', memo:'', satMax:null, noConsec:false, retired:false};
+  const roleOpts = ['', ...data.roles]; if(st.role && !roleOpts.includes(st.role)) roleOpts.push(st.role);
+  const ck = (idn, on, txt) => `<label style="display:flex;align-items:center;gap:8px;font-size:14px;margin-top:12px"><input type="checkbox" id="${idn}" ${on?'checked':''} style="width:22px;height:22px">${txt}</label>`;
+  openSheet(`
+    <h3>${id ? '職員の編集' : '職員の追加'}</h3>
+    <label class="lb">氏名</label><input type="text" id="fName" value="${esc(st.name)}" placeholder="例）山田 花子">
+    <label class="lb">役職</label><select id="fRole">${roleOpts.map(r => `<option value="${esc(r)}" ${r===st.role?'selected':''}>${r?esc(r):'（なし）'}</option>`).join('')}</select>
+    <label class="lb">メモ（任意）</label><input type="text" id="fMemo" value="${esc(st.memo||'')}" placeholder="例）正職員 / パート">
+    <label class="lb">土曜の割り振り</label>
+    <select id="fSatMax">${[['', '制限なし'], ['1','月1回まで'], ['2','月2回まで'], ['3','月3回まで'], ['0','割り振らない（対象外）']].map(([v,t]) => `<option value="${v}" ${String(satMaxOf(st) ?? '') === v ? 'selected' : ''}>${t}</option>`).join('')}</select>
+    ${ck('fNoConsec', st.noConsec, '2週連続の土曜には入れない')}
+    ${id ? ck('fRet', st.retired, '退職（シフト表に表示しない）') : ''}
+    <div class="foot">
+      ${id ? '<button class="btn danger" data-act="del">削除</button>' : ''}
+      <button class="btn" data-act="cancel">キャンセル</button>
+      <button class="btn pri" data-act="save">保存</button>
+    </div>`, 'staff', {sid: id || ''});
+}
+sheet.addEventListener('click', ev => {
+  if(sheet.dataset.mode !== 'staff') return;
+  const b = ev.target.closest('[data-act]'); if(!b) return;
+  const id = sheet.dataset.sid;
+  if(b.dataset.act === 'cancel') return closeSheet();
+  if(b.dataset.act === 'del'){
+    const st = data.staff.find(s => s.id === id);
+    if(!confirm(`${st.name} さんを削除します。入力済みのシフトもすべて消えます。\n退職の場合は「退職」へのチェックをおすすめします。\n本当に削除しますか？`)) return;
+    data.staff = data.staff.filter(s => s.id !== id); delete data.shifts[id];
+    save(); closeSheet(); renderAll(); return toast('削除しました');
+  }
+  if(b.dataset.act === 'save'){
+    const v = { name: document.getElementById('fName').value.trim(), role: document.getElementById('fRole').value,
+                memo: document.getElementById('fMemo').value.trim(), noConsec: document.getElementById('fNoConsec').checked };
+    const sm = document.getElementById('fSatMax').value; v.satMax = sm === '' ? null : Number(sm); v.noSat = false;
+    const r = document.getElementById('fRet'); v.retired = r ? r.checked : false;
+    if(!v.name) return toast('氏名を入力してください');
+    if(id) Object.assign(data.staff.find(s => s.id === id), v); else data.staff.push({id:uid(), ...v});
+    save(); closeSheet(); renderAll(); toast('保存しました');
+  }
+});
+
+/* ========== 設定 ========== */
+function renderSettings(){
+  const $ = id => document.getElementById(id);
+  $('facilityInput').value = data.facility;
+  $('stdS').value = data.std.s; $('stdE').value = data.std.e; $('stdB').value = data.std.b;
+  $('minInput').value = data.minPerDay || 0;
+  $('closeNY').checked = !!data.closeNY;
+  $('closedList').innerHTML = data.closedDays.slice().sort().map(d => {
+    const [y,m,dd] = d.split('-').map(Number);
+    return `<div class="row"><div class="grow">${y}年${m}月${dd}日（${WD[new Date(y,m-1,dd).getDay()]}）</div><button class="mini" data-cdel="${d}">✕</button></div>`;
+  }).join('');
+  $('roleList').innerHTML = data.roles.map((r,i) => `
+    <div class="row"><div class="grow">${esc(r)}</div>
+      <button class="mini" data-rup="${i}" ${i===0?'disabled':''}>↑</button>
+      <button class="mini" data-rdel="${i}">✕</button></div>`).join('') || '<div class="row meta">役職がありません</div>';
+  $('offList').innerHTML = data.offTypes.map((r,i) => `
+    <div class="row"><div class="grow">${esc(r)}</div><button class="mini" data-odel="${i}">✕</button></div>`).join('') || '<div class="row meta">区分がありません</div>';
+}
+const on = (id, ev, fn) => document.getElementById(id).addEventListener(ev, fn);
+on('facilityInput','change', e => { data.facility = e.target.value.trim() || '保育園'; save(); renderHeader(); });
+on('stdS','change', e => { if(e.target.value){ data.std.s = e.target.value; save(); renderShift(); } });
+on('stdE','change', e => { if(e.target.value){ data.std.e = e.target.value; save(); renderShift(); } });
+on('stdB','change', e => { data.std.b = Math.max(0, Number(e.target.value)||0); save(); });
+on('minInput','change', e => { data.minPerDay = Math.max(0, Number(e.target.value)||0); save(); markShort(); });
+on('closeNY','change', e => { data.closeNY = e.target.checked; save(); renderShift(); });
+on('closedAddBtn','click', () => {
+  const v = document.getElementById('closedAdd').value; if(!v) return toast('日付を選んでください');
+  if(!data.closedDays.includes(v)) data.closedDays.push(v);
+  save(); renderSettings(); renderShift(); toast('休園日を追加しました');
+});
+on('closedList','click', ev => {
+  const b = ev.target.closest('[data-cdel]'); if(!b) return;
+  data.closedDays = data.closedDays.filter(d => d !== b.dataset.cdel); save(); renderSettings(); renderShift();
+});
+on('roleList','click', ev => {
+  const u = ev.target.closest('[data-rup]'), d = ev.target.closest('[data-rdel]');
+  if(u){ const i = Number(u.dataset.rup); [data.roles[i-1], data.roles[i]] = [data.roles[i], data.roles[i-1]]; }
+  else if(d){ const i = Number(d.dataset.rdel); if(!confirm(`役職「${data.roles[i]}」を一覧から削除しますか？（職員に設定済みの役職はそのまま残ります）`)) return; data.roles.splice(i,1); }
+  else return;
+  save(); renderSettings();
+});
+on('addRole','click', () => {
+  const r = (prompt('追加する役職名') || '').trim();
+  if(r && !data.roles.includes(r)){ data.roles.push(r); save(); renderSettings(); }
+});
+on('offList','click', ev => {
+  const d = ev.target.closest('[data-odel]'); if(!d) return;
+  const i = Number(d.dataset.odel);
+  if(!confirm(`「${data.offTypes[i]}」を削除しますか？（入力済みのシフトは残ります）`)) return;
+  data.offTypes.splice(i,1); save(); renderSettings(); renderTools();
+});
+on('addOff','click', () => {
+  const r = (prompt('追加する休みの区分（例：特休、振休）') || '').trim();
+  if(r && r !== REQ && !data.offTypes.includes(r)){ data.offTypes.push(r); save(); renderSettings(); renderTools(); }
+});
+
+/* ========== バックアップ ========== */
+function download(name, content, type){
+  const blob = new Blob([content], {type});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+on('exportBtn','click', () => download(`shift-backup-${todayStr.replace(/-/g,'')}.json`, JSON.stringify(data), 'application/json'));
+on('importBtn','click', () => document.getElementById('importFile').click());
+on('importFile','change', async e => {
+  const f = e.target.files[0]; if(!f) return;
+  try{
+    const d = JSON.parse(await f.text());
+    if(!d || !Array.isArray(d.staff) || typeof d.shifts !== 'object' || !d.std) throw new Error();
+    if(confirm(`職員${d.staff.length}名分のデータを読み込みます。現在のデータは置き換えられます。よろしいですか？`)){
+      data = Object.assign(DEFAULT(), d); save(); renderAll(true); toast('読み込みました');
+    }
+  }catch(err){ alert('ファイルを読み込めませんでした。このアプリで書き出したバックアップファイルを選んでください。'); }
+  e.target.value = '';
+});
+
+/* ========== 共通 ========== */
+document.querySelector('.tabbar').addEventListener('click', ev => {
+  const b = ev.target.closest('[data-tab]'); if(!b) return;
+  document.querySelectorAll('.tabbar button').forEach(x => x.classList.toggle('on', x === b));
+  document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + b.dataset.tab));
+  window.scrollTo(0, 0);
+});
+let toastTimer;
+function toast(msg){
+  const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 1800);
+}
+function renderAll(scroll){ renderShift(scroll); renderStaff(); renderSettings(); }
+
+load(); renderAll(true);
+</script>
+</body>
+</html>
